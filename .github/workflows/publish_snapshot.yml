@@ -16,7 +16,11 @@ jobs:
             OS: windows-latest
           - TARGET: aarch64-apple-darwin
             OS: macos-latest
+          - TARGET: x86_64-apple-darwin
+            OS: macos-latest
           - TARGET: x86_64-unknown-linux-gnu
+            OS: ubuntu-22.04
+          - TARGET: aarch64-unknown-linux-gnu
             OS: ubuntu-22.04
     runs-on: ${{ matrix.OS }}
     env:
