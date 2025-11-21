@@ -192,6 +192,7 @@ public class BloomFilter extends NativeLoader implements AutoCloseable {
         return new BloomFilter(raw);
     }
 
+
     private static native int hashes0(long raw);
 
     private static native void addInt0(long raw, int element);
@@ -228,5 +229,11 @@ public class BloomFilter extends NativeLoader implements AutoCloseable {
 
     private static native void copyBytes0(long raw, byte[] bytes);
 
+
+    public void getHashIndices(long[] indices, String element) {
+        getHashIndices0 (raw, indices, element);
+    }
+
+    private static native void getHashIndices0(long raw, long[] indices, String element);
 
 }

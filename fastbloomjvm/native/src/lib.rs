@@ -610,3 +610,46 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_CountingBloomFilter_fro
 
     Box::into_raw(filter) as jlong
 }
+
+
+
+
+
+
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndices0<'local>(
+    mut env: JNIEnv<'local>, clz: JClass<'local>, raw: jlong, array: JLongArray, element: JString<'local>, 
+) {
+    // востанавливаем указатель на себя, как на объект BloomFilter
+    let mut filter = Box::from_raw(raw as *mut BloomFilter);
+
+    // элемент по которому расчитываются хеши - строка
+    let element = env.get_string(&element).unwrap();
+    
+    // todo проверить достаточн ли размер переданнного массива для заполнения
+    // let array_len = env.get_array_length(&array)? as usize; 
+
+    // буфер для модификации массива переданного из java, 
+    // режим ReleaseMode::COPY_BACK - обновленные элементы будут возвращены в java
+    let mut buffer = env.get_long_array_elements(&array, jni::sys::ReleaseMode::COPY_BACK)?.as_mut_slice()?;
+
+    // расчет хешей, строковый элемент передаем как массив байтов
+    let indices = filter.get_hash_indices(element.to_bytes());
+    // todo перед копированием можно сверить размеры 
+    // let indices_len = indices.len();
+
+    // количество расчитваемых хешей, должен совпадать с размерами массивов
+    let hashes = filter.hashes();
+
+    // копируем хеши в буфер
+    for idx in 0..hashes {
+        buffer[idx] = indices[idx];
+    }
+    
+    // не знаю зачем это, но оно везде присутствует
+    Box::into_raw(filter); // keep filter alive.
+
+    // Очистка временных ресурсов
+    drop(buffer);
+}
