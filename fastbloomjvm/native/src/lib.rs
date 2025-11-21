@@ -611,12 +611,6 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_CountingBloomFilter_fro
     Box::into_raw(filter) as jlong
 }
 
-
-
-
-
-
-
 #[no_mangle]
 pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndices0<'local>(
     mut env: JNIEnv<'local>, clz: JClass<'local>, raw: jlong, array: JLongArray, element: JString<'local>, 
