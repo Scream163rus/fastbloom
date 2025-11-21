@@ -611,49 +611,4 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_CountingBloomFilter_fro
     Box::into_raw(filter) as jlong
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndices0<'local>(
-    mut env: JNIEnv<'local>,
-    _clz: JClass<'local>,
-    raw: jlong,
-    array: JLongArray<'local>,
-    element: JString<'local>,
-) {
-    // восстанавливаем указатель на BloomFilter
-    let mut filter = Box::from_raw(raw as *mut BloomFilter);
-
-    // получаем строку
-    let element = match env.get_string(&element) {
-        Ok(s) => s,
-        Err(_) => return,
-    };
-
-    // получаем AutoArray<long>
-    let auto = match env.get_long_array_elements(&array, jni::sys::ReleaseMode::COPY_BACK) {
-        Ok(a) => a,
-        Err(_) => return,
-    };
-
-    // получаем mutable slice
-    let buffer = match auto.as_mut_slice() {
-        Ok(b) => b,
-        Err(_) => return,
-    };
-
-    // вычисляем индексы
-    let indices = filter.get_hash_indices(element.to_bytes());
-
-    let hashes = filter.hashes() as usize;
-
-    // копируем
-    for i in 0..hashes {
-        buffer[i] = indices[i];
-    }
-
-    // вернуть владение обратно
-    Box::into_raw(filter);
-
-    // Очистка временных ресурсов
-    drop(buffer);
-}
 
