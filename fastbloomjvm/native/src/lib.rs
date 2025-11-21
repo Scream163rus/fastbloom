@@ -619,7 +619,7 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndi
     array: JLongArray,
     element: JString<'local>,
 ) {
-    // восстановить указатель
+    // восстановить pointer → BloomFilter
     let mut filter = Box::from_raw(raw as *mut BloomFilter);
 
     // строка
@@ -628,25 +628,12 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndi
         Err(_) => return,
     };
 
-    // AutoArray<long>
-    let auto = match env.get_long_array_elements(&array, jni::sys::ReleaseMode::COPY_BACK) {
-        Ok(a) => a,
-        Err(_) => return,
-    };
-
-    // slice
-    let buffer = match auto.as_mut_slice() {
-        Ok(b) => b,
-        Err(_) => return,
-    };
-
-    // вычислить индексы
+    // вычислить хеши
     let indices = filter.get_hash_indices(element.to_bytes());
     let hashes = filter.hashes() as usize;
 
-    for i in 0..hashes {
-        buffer[i] = indices[i];
-    }
+    // копируем напрямую в Java массив
+    let _ = env.set_long_array_region(array, 0, &indices[..hashes]);
 
     // вернуть владение
     Box::into_raw(filter);
