@@ -613,37 +613,47 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_CountingBloomFilter_fro
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndices0<'local>(
-    mut env: JNIEnv<'local>, clz: JClass<'local>, raw: jlong, array: JLongArray, element: JString<'local>, 
+    mut env: JNIEnv<'local>,
+    _clz: JClass<'local>,
+    raw: jlong,
+    array: JLongArray<'local>,
+    element: JString<'local>,
 ) {
-    // востанавливаем указатель на себя, как на объект BloomFilter
+    // восстанавливаем указатель на BloomFilter
     let mut filter = Box::from_raw(raw as *mut BloomFilter);
 
-    // элемент по которому расчитываются хеши - строка
-    let element = env.get_string(&element).unwrap();
-    
-    // todo проверить достаточн ли размер переданнного массива для заполнения
-    // let array_len = env.get_array_length(&array)? as usize; 
+    // получаем строку
+    let element = match env.get_string(&element) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
 
-    // буфер для модификации массива переданного из java, 
-    // режим ReleaseMode::COPY_BACK - обновленные элементы будут возвращены в java
-    let mut buffer = env.get_long_array_elements(&array, jni::sys::ReleaseMode::COPY_BACK)?.as_mut_slice()?;
+    // получаем AutoArray<long>
+    let auto = match env.get_long_array_elements(&array, jni::sys::ReleaseMode::COPY_BACK) {
+        Ok(a) => a,
+        Err(_) => return,
+    };
 
-    // расчет хешей, строковый элемент передаем как массив байтов
+    // получаем mutable slice
+    let buffer = match auto.as_mut_slice() {
+        Ok(b) => b,
+        Err(_) => return,
+    };
+
+    // вычисляем индексы
     let indices = filter.get_hash_indices(element.to_bytes());
-    // todo перед копированием можно сверить размеры 
-    // let indices_len = indices.len();
 
-    // количество расчитваемых хешей, должен совпадать с размерами массивов
-    let hashes = filter.hashes();
+    let hashes = filter.hashes() as usize;
 
-    // копируем хеши в буфер
-    for idx in 0..hashes {
-        buffer[idx] = indices[idx];
+    // копируем
+    for i in 0..hashes {
+        buffer[i] = indices[i];
     }
-    
-    // не знаю зачем это, но оно везде присутствует
-    Box::into_raw(filter); // keep filter alive.
+
+    // вернуть владение обратно
+    Box::into_raw(filter);
 
     // Очистка временных ресурсов
     drop(buffer);
 }
+
