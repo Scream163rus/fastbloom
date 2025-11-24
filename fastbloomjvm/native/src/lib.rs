@@ -619,24 +619,26 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_computeHash
     m: jlong,
     k: jint,
 ) -> jlongArray {
-    let element: String = match env.get_string(element) {
+    let element: String = match env.get_string(&element) {
         Ok(s) => s.into(),
-        Err(_) => return jlongArray::default(),
+        Err(_) => return std::ptr::null_mut(),
     };
 
     let bytes = element.into_bytes();
-    let indices = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
+    let indices_u64 = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
 
-    let output = match env.new_long_array(indices.len() as i32) {
+    let indices_i64: Vec<i64> = indices_u64.iter().map(|&v| v as i64).collect();
+
+    let output = match env.new_long_array(indices_i64.len() as i32) {
         Ok(arr) => arr,
-        Err(_) => return jlongArray::default(),
+        Err(_) => return std::ptr::null_mut(),
     };
 
-    if let Err(_) = env.set_long_array_region(&output, 0, &indices) {
-        return jlongArray::default();
+    if env.set_long_array_region(&output, 0, &indices_i64[..]).is_err() {
+        return std::ptr::null_mut();
     }
 
-    output
+    output.into_raw()
 }
 
 #[no_mangle]
@@ -648,18 +650,20 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_computeHash
     k: jint,
 ) -> jlongArray {
     let mut bytes = [0u8; 8];
-    bytes[..8].copy_from_slice(&element.to_le_bytes());
+    bytes.copy_from_slice(&element.to_le_bytes());
 
-    let indices = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
+    let indices_u64 = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
 
-    let output = match env.new_long_array(indices.len() as i32) {
+    let indices_i64: Vec<i64> = indices_u64.iter().map(|&v| v as i64).collect();
+
+    let output = match env.new_long_array(indices_i64.len() as i32) {
         Ok(arr) => arr,
-        Err(_) => return jlongArray::default(),
+        Err(_) => return std::ptr::null_mut(),
     };
 
-    if let Err(_) = env.set_long_array_region(&output, 0, &indices) {
-        return jlongArray::default();
+    if env.set_long_array_region(&output, 0, &indices_i64[..]).is_err() {
+        return std::ptr::null_mut();
     }
 
-    output
+    output.into_raw()
 }
