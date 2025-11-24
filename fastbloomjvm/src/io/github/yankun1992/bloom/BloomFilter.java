@@ -192,6 +192,15 @@ public class BloomFilter extends NativeLoader implements AutoCloseable {
         return new BloomFilter(raw);
     }
 
+    public static long[] computeHashIndices(String element, long size, int fcount) {
+        return computeHashIndicesForString(element, size, fcount);
+    }
+
+
+    public static long[] computeHashIndices(long element, long size, int fcount) {
+        return computeHashIndicesForLong(element, size, fcount);
+    }
+
 
     private static native int hashes0(long raw);
 
@@ -229,11 +238,8 @@ public class BloomFilter extends NativeLoader implements AutoCloseable {
 
     private static native void copyBytes0(long raw, byte[] bytes);
 
-
-    public void getHashIndices(long[] indices, String element) {
-        getHashIndices0 (raw, indices, element);
-    }
-
-    private static native void getHashIndices0(long raw, long[] indices, String element);
+    // JNI declarations
+    private static native long[] computeHashIndicesForString(String element, long m, int k);
+    private static native long[] computeHashIndicesForLong(long element, long m, int k);
 
 }

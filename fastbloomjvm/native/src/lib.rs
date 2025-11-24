@@ -612,32 +612,54 @@ pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_CountingBloomFilter_fro
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_getHashIndices0<'local>(
-    mut env: JNIEnv<'local>,
-    _clz: JClass<'local>,
-    raw: jlong,
-    array: JLongArray,
-    element: JString<'local>,
-) {
-    // восстановить указатель
-    let mut filter = Box::from_raw(raw as *mut BloomFilter);
-
-    // строка
-    let element = match env.get_string(&element) {
-        Ok(s) => s,
-        Err(_) => return,
+pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_computeHashIndicesForString(
+    mut env: JNIEnv,
+    _class: JClass,
+    element: JString,
+    m: jlong,
+    k: jint,
+) -> jlongArray {
+    let element: String = match env.get_string(element) {
+        Ok(s) => s.into(),
+        Err(_) => return jlongArray::default(),
     };
 
-    // вычисляем хеши
-    let indices = filter.get_hash_indices(element.to_bytes());
-    let hashes = filter.hashes() as usize;
+    let bytes = element.into_bytes();
+    let indices = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
 
-    // конвертируем u64 → i64 (требование JNI)
-    let indices_i64: Vec<i64> = indices[..hashes].iter().map(|x| *x as i64).collect();
+    let output = match env.new_long_array(indices.len() as i32) {
+        Ok(arr) => arr,
+        Err(_) => return jlongArray::default(),
+    };
 
-    // копируем прямо в java long[]
-    let _ = env.set_long_array_region(array, 0, &indices_i64);
+    if let Err(_) = env.set_long_array_region(&output, 0, &indices) {
+        return jlongArray::default();
+    }
 
-    // вернуть владение
-    Box::into_raw(filter);
+    output
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_io_github_yankun1992_bloom_BloomFilter_computeHashIndicesForLong(
+    mut env: JNIEnv,
+    _class: JClass,
+    element: jlong,
+    m: jlong,
+    k: jint,
+) -> jlongArray {
+    let mut bytes = [0u8; 8];
+    bytes[..8].copy_from_slice(&element.to_le_bytes());
+
+    let indices = BloomFilter::compute_hash_indices(&bytes, m as u64, k as u64);
+
+    let output = match env.new_long_array(indices.len() as i32) {
+        Ok(arr) => arr,
+        Err(_) => return jlongArray::default(),
+    };
+
+    if let Err(_) = env.set_long_array_region(&output, 0, &indices) {
+        return jlongArray::default();
+    }
+
+    output
 }

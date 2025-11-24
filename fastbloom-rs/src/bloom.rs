@@ -153,6 +153,20 @@ impl BloomFilter {
             let bit_set = BloomBitVec::new((config.size >> 5) as usize);
         BloomFilter { config, bit_set }
     }
+    pub fn compute_hash_indices(element: &[u8], m: u64, k: u64) -> Vec<u64> {
+        let hash1 = xxh3_64_with_seed(element, 0) % m;
+        let hash2 = xxh3_64_with_seed(element, 32) % m;
+
+        let mut indices = Vec::with_capacity(k as usize);
+        indices.push(hash1);
+
+        for i in 1..k {
+            let idx = (hash1 + i * hash2) % m;
+            indices.push(idx);
+        }
+
+        indices
+    }
 
     /// Tests whether an element is present in the filter (subject to the specified false
     /// positive rate). And if it is not in this filter, add it to the filter.
