@@ -14,34 +14,68 @@ jobs:
         include:
           - TARGET: x86_64-pc-windows-msvc
             OS: windows-latest
+
           - TARGET: aarch64-apple-darwin
             OS: macos-latest
+
           - TARGET: x86_64-apple-darwin
             OS: macos-latest
+
+          # Linux — собираем в Docker с glibc 2.27
           - TARGET: x86_64-unknown-linux-gnu
-            OS: ubuntu-22.04
+            OS: ubuntu-latest
+            USE_DOCKER: true
+
     runs-on: ${{ matrix.OS }}
     env:
       MILL_RUST_TARGET: ${{ matrix.TARGET }}
+
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions-rs/toolchain@v1
+      # ===== Windows / macOS =====
+      - name: Setup Rust
+        if: matrix.USE_DOCKER != true
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.TARGET }}
           override: true
 
-      - uses: actions/setup-java@v3
+      - name: Setup Java
+        if: matrix.USE_DOCKER != true
+        uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '8'
 
-      - run: chmod +x millw
+      - name: Build native (host)
+        if: matrix.USE_DOCKER != true
+        run: |
+          chmod +x millw
+          ./millw fastbloomjvm.compileNative
 
-      - run: ./millw fastbloomjvm.compileNative
+      # ===== Linux (Docker / glibc 2.27) =====
+      - name: Build native (Linux, glibc 2.27)
+        if: matrix.USE_DOCKER == true
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            ubuntu:18.04 \
+            bash -c "
+              apt update &&
+              apt install -y \
+                build-essential \
+                curl \
+                git \
+                openjdk-8-jdk &&
+              chmod +x millw &&
+              ./millw fastbloomjvm.compileNative
+            "
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: result-${{ matrix.TARGET }}
           path: out/fastbloomjvm/compileNative.dest/native/
@@ -50,17 +84,12 @@ jobs:
 
   deploy:
     needs: cross
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       MILL_RUST_TARGET: x86_64-unknown-linux-gnu
+
     steps:
       - uses: actions/checkout@v3
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: x86_64-unknown-linux-gnu
-          override: true
 
       - uses: actions/setup-java@v3
         with:
